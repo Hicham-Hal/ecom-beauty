@@ -5,6 +5,7 @@ import adminRoute from './routes/admin.route.js'
 import clientRoute from './routes/client.route.js'
 import cookieParser from 'cookie-parser';
 import paymentRoute from './routes/payment.route.js'
+import cartRoute from './routes/cart.route.js'
 
 const app = e()
 
@@ -16,5 +17,6 @@ app.use(e.urlencoded({ extended: false }))
 app.use('/', authRoute)
 app.use('/dashboard', adminRoute)
 app.use('/', clientRoute)
+app.use('/cart', cartRoute)
 
 export default app

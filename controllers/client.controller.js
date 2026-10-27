@@ -16,184 +16,45 @@ export const getProductsPerCategory = async(req, res) => {
     }
 }
 
-export const addFavProduct = async(req, res) => {
-    const { id } = req.body
-    try{
-        const user = await User.findById(req.user.id)
-            const exist = user.fav?.find(item => item.toString() === id)
-        if(exist){
-            return res.status(400).json({ message: 'product already favorable', user })
-        }
-        user.fav.push(id)
-        await user.save()
-        return res.status(200).json(user)
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
 
-export const UnFavProduct = async(req, res) => {
-    const { id } = req.body
-    try{
-        const user = await User.findById(req.user.id)
-        // console.log(us)
-        const exist = user.fav?.find(item => item.toString() === id)
-        if(!exist){
-            return res.status(400).json({ message: 'product doesn\'t exist', user })
-        }
-        user.fav = user.fav.filter(item => item.toString() !== id)
-        await user.save()
-        return res.status(200).json(user)
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
+export const checkout = async (req, res) => {
+    const { firstName, lastName, phone, wilaya, commune, deliveryType, paymentMethod = 'cod' } = req.body
+    const cartId = req.headers['x-cart-id']
 
-export const addToCart = async(req, res) => {
-    const {productId, quantity = 1} = req.body
-    const userId = req.user.id;
-    try{
-        if(!productId){
-            return res.status(400).json({ message: 'Product ID is required' })
+    try {
+        // 1. validate the customer data
+        if (!firstName || !lastName || !phone || !wilaya || !commune || !deliveryType) {
+            return res.status(400).json({ message: 'All delivery fields are required' })
+        }
+        if (!['home', 'stopdesk'].includes(deliveryType)) {
+            return res.status(400).json({ message: 'Invalid delivery type' })
+        }
+        if (!['cod', 'chargily'].includes(paymentMethod)) {
+            return res.status(400).json({ message: 'Invalid payment method' })
+        }
+        // Algerian mobile numbers: 05/06/07 + 8 digits
+        if (!/^0[567]\d{8}$/.test(phone)) {
+            return res.status(400).json({ message: 'Invalid phone number' })
         }
 
-        if(quantity < 1){
-            return res.status(400).json({ message: 'Quantity must be at least 1'})
+        // 2. load the cart
+        if (!cartId || !mongoose.isValidObjectId(cartId)) {
+            return res.status(400).json({ message: 'Cart is empty' })
+        }
+        const cart = await Cart.findById(cartId)
+        if (!cart || cart.items.length === 0) {
+            return res.status(400).json({ message: 'Cart is empty' })
         }
 
-        //verify product exist
-        const product = await Product.findById(productId)
-        if(!product){
-            return res.status(404).json({ message: 'Product not found' })
-        }
-
-        const user = await User.findById(userId)
-        if(!user){
-            return res.status(404).json({ message: 'User not found' })
-        }
-
-        //check if product already in cart
-        const existingItem = user.cart.find(item => item.product.toString() === productId)
-
-        if(existingItem){
-            existingItem.quantity += quantity
-        }else{
-            user.cart.push({ product: productId, quantity })
-        }
-        await user.save()
-        return res.status(200).json({ user, cart : user.cart.map(item => item) })
-        
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
-
-export const deteleFromCart = async(req, res) => {
-    const {itemId} = req.body
-    try{
-        const user = await User.findById(req.user.id)
-        if(!user)return res.status(404).json({ message: 'User not found' })
-        const existItem = user.cart.find(item => item._id.toString() === itemId)
-        console.log(existItem)
-        if(!existItem){
-            return res.status(404).json({ message: 'cart item not found', user })
-        }
-        user.cart = user.cart.filter(item => item._id.toString() !== itemId)
-        await user.save()
-        return res.status(200).json({ user })
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
-
-export const removeAllFromCart = async(req, res) => {
-    try{
-        const user = await User.findById(req.user.id)
-        if(!user) return res.status(404).json({ message: 'User not found' })
-        if(user.cart.length == 0){
-            return res.status(404).json({ message: 'cart item already empty' })
-        }
-        user.cart = []
-        await user.save()
-        return res.status(200).json(user)
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
-
-export const increaseQuantity = async(req, res) => {
-    const {itemId} = req.body
-    try{
-        const user = await User.findById(req.user.id)
-        const item = user.cart.find(item => item._id.toString() === itemId)
-        if(!item) return res.status(404).json({ message: 'item not found' })
-        item.quantity += 1
-
-        await user.save()
-        return res.status(200).json(user)
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
-
-export const dicreaseQuantity = async(req, res) => {
-    const {itemId} = req.body
-    try{
-        const user = await User.findById(req.user.id)
-        const item = user.cart.find(item => item._id.toString() === itemId)
-        if(!item) return res.status(404).json({ message: 'item not found' })
-        if(item.quantity === 1){
-            user.cart = user.cart.filter(item => item._id.toString() !== itemId)
-            await user.save()
-            return res.status(200).json(user)
-        }
-        item.quantity -= 1
-
-        await user.save()
-        return res.status(200).json(user)
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
-
-export const getFavProduct = async(req, res) => {
-    try{
-        const user = await User.findById(req.user.id).populate('fav')
-        if(!user)return res.status(404).json({ message: 'User not found' })
-
-        return res.status(200).json(user.fav)
-    }catch(err){
-        console.log(err)
-        return res.status(500).json({ error: 'Something went wrong' })
-    }
-}
-
-export const checkout = async(req, res) => {
-    const { shippingAddress, paymentMethod = 'cod' } = req.body
-    try{
-        const user = await User.findById(req.user.id)
-        if(!user) return res.status(404).json({ message: 'User not found' })
-        if(user.cart.length === 0) return res.status(400).json({ message: 'Cart is empty' })
-
+        // 3. build the order items using prices from the DATABASE (never from the client)
         const items = []
-        let totalAmount = 0;
-        for(const cartItem of user.cart){
-            const productId = cartItem.product;
-            const product = await Product.findById(productId)
-            if(!product) continue; //product was deleted
-            if(product.quantity < cartItem.quantity){
-                return res.status(400).json({
-                    message: `No enough stock for ${product.title}`
-                })
+        let totalAmount = 0
+        for (const cartItem of cart.items) {
+            const product = await Product.findById(cartItem.product)
+            if (!product) continue // product was deleted
+            if (product.quantity < cartItem.quantity) {
+                return res.status(400).json({ message: `Not enough stock for ${product.title}` })
             }
-
             items.push({
                 product: product._id,
                 title: product.title,
@@ -201,32 +62,41 @@ export const checkout = async(req, res) => {
                 quantity: cartItem.quantity,
                 image: product.image
             })
-
             totalAmount += cartItem.quantity * product.price
         }
 
-        const newOrder = new Order({
-            user: req.user.id,
-            items,
-            shippingAddress,
-            totalAmount,
-            paymentMethod
-        })
-        await newOrder.save()
-
-        if(paymentMethod !== 'stripe'){
-
-            //decrement stock
-            for (const item of items){
-                await Product.findByIdAndUpdate(item.product, {
-                    $inc: { quantity: -item.quantity }
-                })
-            }
-            user.cart = []
-            await user.save()
-            res.status(200).json({newOrder, user})
+        if (items.length === 0) {
+            return res.status(400).json({ message: 'None of the products in your cart are available anymore' })
         }
-        //online: create a chargily checkout
+
+        const orderData = {
+            customer: { firstName, lastName, phone },
+            shippingAddress: { wilaya, commune, deliveryType },
+            items,
+            totalAmount,
+            paymentMethod,
+            cartId: cart._id
+        }
+
+        // 4a. Cash on delivery: reserve stock, save the order, clear the cart
+        if (paymentMethod === 'cod') {
+            const stock = await decrementStock(items)
+            if (!stock.ok) {
+                return res.status(400).json({ message: `Not enough stock for ${stock.title}` })
+            }
+
+            const newOrder = await Order.create(orderData)
+
+            cart.items = []
+            cart.updatedAt = Date.now()
+            await cart.save()
+
+            return res.status(201).json({ order: newOrder })
+        }
+
+        // 4b. Online payment: save the order as pending and create the Chargily checkout.
+        // Stock and the cart are handled later, when the payment is confirmed (webhook).
+        const newOrder = await Order.create(orderData)
 
         const chargilyCheckout = await createChargilyCheckout({
             totalAmount,
@@ -236,9 +106,9 @@ export const checkout = async(req, res) => {
         newOrder.chargilyCheckoutId = chargilyCheckout.id
         await newOrder.save()
 
-        return res.status(200).json({ newOrder, checkout_url: chargilyCheckout.checkout_url })
-        
-    }catch(err){
+        return res.status(201).json({ order: newOrder, checkout_url: chargilyCheckout.checkout_url })
+
+    } catch (err) {
         console.log(err)
         return res.status(500).json({ error: 'Something went wrong' })
     }
