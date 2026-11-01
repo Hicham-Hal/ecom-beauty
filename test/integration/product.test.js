@@ -21,7 +21,6 @@ describe('POST /add-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
         expect(res.status).toBe(201)
@@ -39,7 +38,6 @@ describe('POST /add-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
         
         expect(res.status).toBe(401)
@@ -61,7 +59,6 @@ describe('PUT /update-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
 
@@ -88,7 +85,6 @@ describe('PUT /update-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
         const res = await request(app).put(`/dashboard/product/${product.body._id}`).set('Authorization', `Bearer ${userB.token}`)
@@ -109,7 +105,6 @@ describe('PUT /update-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
         const res = await request(app).put(`/dashboard/product/${product.body._id}`)
@@ -133,7 +128,6 @@ describe('DELETE /delete-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
         const res = await request(app).delete(`/dashboard/product/${product.body._id}`).set('Authorization', `Bearer ${token}`)
@@ -150,7 +144,6 @@ describe('DELETE /delete-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
         const res = await request(app).delete(`/dashboard/product/${product.body._id}`).set('Authorization', `Bearer ${userB.token}`)
@@ -166,7 +159,6 @@ describe('DELETE /delete-product', () => {
             .field('description', 'test product description for clarity')
             .field('price', 13000)
             .field('category', 'men')
-            .field('quantity', 8)
             .attach('product', fixturePath)
 
         const res = await request(app).delete(`/dashboard/product/${product.body._id}`)

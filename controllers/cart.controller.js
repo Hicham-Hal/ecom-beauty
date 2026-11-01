@@ -1,4 +1,5 @@
 // controllers/cart.js
+import mongoose from 'mongoose'
 import Cart from '../models/Cart.model.js'
 import Product from '../models/Product.model.js'
 

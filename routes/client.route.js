@@ -9,8 +9,5 @@ const route = e.Router()
 
 route.get('/products', getProductsPerCategory)
 route.get('/', getProducts)
-route.post('/checkout', validateToken, checkoutValidator, validate, checkout) //checkout
-route.get('/order/:id', validateToken, getMyOrder)
-route.get('/orders', validateToken, getMyOrders)
-route.post('/cancel', validateToken, cancelOrder)
+route.post('/checkout', checkout) //checkout
 export default route

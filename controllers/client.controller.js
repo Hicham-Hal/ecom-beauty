@@ -1,12 +1,13 @@
+import mongoose from "mongoose"
 import { createChargilyCheckout } from "../lib/chargily.js"
 import Order from "../models/Order.model.js"
 import Product from "../models/Product.model.js"
 import User from "../models/User.model.js"
+import Cart from "../models/Cart.model.js"
 
 export const getProductsPerCategory = async(req, res) => {
     const { cat } = req.query
     if(!cat) return res.status(400).json({ message: 'cat parameter required' })
-    console.log(cat)      
     try{
         const products = await Product.find({ category: cat })
         return res.status(200).json(products)
@@ -80,11 +81,7 @@ export const checkout = async (req, res) => {
 
         // 4a. Cash on delivery: reserve stock, save the order, clear the cart
         if (paymentMethod === 'cod') {
-            const stock = await decrementStock(items)
-            if (!stock.ok) {
-                return res.status(400).json({ message: `Not enough stock for ${stock.title}` })
-            }
-
+            
             const newOrder = await Order.create(orderData)
 
             cart.items = []
