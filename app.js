@@ -19,7 +19,7 @@ app.use(cookieParser())
 app.use(e.urlencoded({ extended: false }))
 
 app.use('/api/payment', paymentRoute)
-app.use('/api', authRoute)
+app.use('/api/auth', authRoute)
 app.use('/api', productsRoute)
 app.use('/api', adminRoute)
 app.use('/api', clientRoute)
