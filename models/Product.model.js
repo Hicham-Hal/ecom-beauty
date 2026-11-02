@@ -17,7 +17,7 @@ const productSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: true,
+      // required: true,
       enum: [
         'Robes de Mariée',
         'Caftans',
