@@ -50,134 +50,73 @@ const cleanTempFiles = async (files = {}) => {
 
 /* ---------- products ---------- */
 
+export const getUploadSignature = (req, res) => res.json(signUpload('products'))
+
+// Only take the fields we allow, and map isNew -> isNewArrival
+const pickProductData = (b) => {
+    const data = {}
+    if (b.category !== undefined) data.category = b.category
+    if (b.name) data.name = { fr: b.name.fr, ar: b.name.ar || b.name.fr }
+    if (b.price !== undefined) data.price = b.price
+    if (b.prepDays !== undefined) data.prepDays = b.prepDays
+    if (b.sizes !== undefined) data.sizes = b.sizes
+    if (b.images !== undefined) data.images = b.images
+    if (b.video !== undefined) data.video = b.video
+    if (b.colors !== undefined) data.colors = b.colors
+    if (b.description) data.description = b.description
+    if (b.isBestSeller !== undefined) data.isBestSeller = b.isBestSeller
+    if (b.isNew !== undefined) data.isNewArrival = b.isNew
+    if (b.stock !== undefined) data.stock = b.stock
+    return data
+}
+
+// every media URL a product uses
+const mediaOf = (p) => [...p.images, p.video, ...p.colors.map((c) => c.url)].filter(Boolean)
+
 export const addProduct = async (req, res) => {
-    const {
-        nameFr, nameAr, category, price, preparationDays,
-        sizes, descriptionFr, descriptionAr,
-        isBestSeller, isNewArrival, inStock,
-    } = req.body
-
-    if (!nameFr || !nameAr || !category || price === undefined || preparationDays === undefined) {
-        return res.status(400).json({ message: 'Fields are required' })
-    }
-    const imageFiles = req.files?.images || []
-    const pastedImages = parseJSON(req.body.imageLinks, [])
-    if (imageFiles.length === 0 && pastedImages.length === 0) {
-        await cleanTempFiles(req.files)
-        return res.status(400).json({ message: 'At least one photo is required' })
-    }
-
     try {
-        const uploadedImages = await Promise.all(
-            imageFiles.map((f) => uploadToCloud(f, 'products/images'))
-        )
-        const images = [...uploadedImages.map((u) => u.url), ...pastedImages]
+        const data = pickProductData(req.body)
+        if (!data.name?.fr || !data.category || data.price === undefined) {
+            return res.status(400).json({ message: 'Fields are required' })
+        }
+        const hasPhoto = data.images?.length > 0 || data.colors?.some((c) => c.url)
+        if (!hasPhoto) return res.status(400).json({ message: 'At least one photo is required' })
 
-        const videoFile = req.files?.video?.[0]
-        const video = videoFile
-            ? (await uploadToCloud(videoFile, 'products/videos')).url
-            : (req.body.videoLink || '')
-
-        const colors = await buildColors(parseJSON(req.body.colors, []), req.files?.colorMedia)
-
-        const product = new Product({
-            name: { fr: nameFr, ar: nameAr },
-            category, price, preparationDays,
-            sizes: parseList(sizes),
-            images, video, colors,
-            description: { fr: descriptionFr || '', ar: descriptionAr || '' },
-            isBestSeller: toBool(isBestSeller),
-            isNewArrival: toBool(isNewArrival),
-            inStock: inStock === undefined ? true : toBool(inStock),
-        })
-
-        await product.save()
+        const product = await Product.create(data)
         return res.status(201).json(product)
     } catch (err) {
-        await cleanTempFiles(req.files)
         console.log(err)
-        if (err.name === 'ValidationError' || err.message?.startsWith('Missing') || err.message?.startsWith('Color') || err.message?.startsWith('Each')) {
-            return res.status(400).json({ message: err.message })
-        }
+        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message })
         return res.status(500).json({ error: 'Something went wrong' })
     }
 }
 
 export const updateProduct = async (req, res) => {
-    const { id } = req.params
-    const {
-        nameFr, nameAr, category, price, preparationDays,
-        sizes, descriptionFr, descriptionAr,
-        isBestSeller, isNewArrival, inStock,
-    } = req.body
-
     try {
-        const product = await Product.findById(id)
+        const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: 'Product not found' })
 
-        if (nameFr) product.name.fr = nameFr
-        if (nameAr) product.name.ar = nameAr
-        if (category) product.category = category
-        if (price !== undefined) product.price = price
-        if (preparationDays !== undefined) product.preparationDays = preparationDays
-        if (sizes !== undefined) product.sizes = parseList(sizes)
-        if (descriptionFr !== undefined) product.description.fr = descriptionFr
-        if (descriptionAr !== undefined) product.description.ar = descriptionAr
-        if (isBestSeller !== undefined) product.isBestSeller = toBool(isBestSeller)
-        if (isNewArrival !== undefined) product.isNewArrival = toBool(isNewArrival)
-        if (inStock !== undefined) product.inStock = toBool(inStock)
-
-      // Images
-        const newFiles = req.files?.images || []
-        if (req.body.keepImages !== undefined || newFiles.length > 0) {
-            const keep = parseJSON(req.body.keepImages, product.images)
-            const removed = product.images.filter((u) => !keep.includes(u))
-            const uploaded = await Promise.all(newFiles.map((f) => uploadToCloud(f, 'products/images')))
-            product.images = [...keep, ...uploaded.map((u) => u.url)]
-            await Promise.all(removed.map(deleteFromCloud))
-        }
-
-        // Video
-        const videoFile = req.files?.video?.[0]
-        if (videoFile) {
-            await deleteFromCloud(product.video)
-            product.video = (await uploadToCloud(videoFile, 'products/videos')).url
-        } else if (toBool(req.body.removeVideo)) {
-            await deleteFromCloud(product.video)
-            product.video = ''
-        }
-
-        // Colors
-        if (req.body.colors !== undefined) {
-            const newColors = await buildColors(parseJSON(req.body.colors, []), req.files?.colorMedia)
-            const keptUrls = newColors.map((c) => c.mediaUrl)
-            const removed = product.colors.filter((c) => !keptUrls.includes(c.mediaUrl))
-            product.colors = newColors
-            await Promise.all(removed.map((c) => deleteFromCloud(c.mediaUrl)))
-        }
-
+        const before = mediaOf(product)
+        product.set(pickProductData(req.body))
         await product.save()
+
+        // delete from the cloud whatever is no longer used
+        const after = new Set(mediaOf(product))
+        await Promise.all(before.filter((u) => !after.has(u)).map(deleteFromCloud))
+
         return res.status(200).json(product)
     } catch (err) {
         console.log(err)
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ message: err.message })
-        }
+        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message })
         return res.status(500).json({ error: 'Something went wrong' })
     }
 }
 
 export const deleteProduct = async (req, res) => {
-    const { id } = req.params
     try {
-        const product = await Product.findById(id)
+        const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: 'product not found' })
-
-        await Promise.all([
-            ...product.images.map(deleteFromCloud),
-            deleteFromCloud(product.video),
-            ...product.colors.map((c) => deleteFromCloud(c.mediaUrl)),
-        ])
+        await Promise.all(mediaOf(product).map(deleteFromCloud))
         await product.deleteOne()
         return res.status(204).send()
     } catch (err) {
@@ -188,14 +127,7 @@ export const deleteProduct = async (req, res) => {
 
 export const getProducts = async (req, res) => {
     try {
-        const { category, inStock, isBestSeller, isNewArrival } = req.query
-        const filter = {}
-        if (category) filter.category = category
-        if (inStock !== undefined) filter.inStock = toBool(inStock)
-        if (isBestSeller !== undefined) filter.isBestSeller = toBool(isBestSeller)
-        if (isNewArrival !== undefined) filter.isNewArrival = toBool(isNewArrival)
-
-        const products = await Product.find(filter).sort({ createdAt: -1 })
+        const products = await Product.find().sort({ createdAt: -1 })
         return res.status(200).json(products)
     } catch (err) {
         console.log(err)
@@ -204,9 +136,8 @@ export const getProducts = async (req, res) => {
 }
 
 export const getSingleProduct = async (req, res) => {
-    const { id } = req.params
     try {
-        const product = await Product.findById(id)
+        const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: 'Product not found' })
         return res.status(200).json(product)
     } catch (err) {
@@ -214,7 +145,6 @@ export const getSingleProduct = async (req, res) => {
         return res.status(500).json({ message: 'Something went wrong' })
     }
 }
-
 /* ---------- orders (unchanged) ---------- */
 
 export const getAllOrder = async (req, res) => {
