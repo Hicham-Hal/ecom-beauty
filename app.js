@@ -6,6 +6,7 @@ import clientRoute from './routes/client.route.js'
 import cookieParser from 'cookie-parser';
 import paymentRoute from './routes/payment.route.js'
 import cartRoute from './routes/cart.route.js'
+import productsRoute from './routes/product.route.js'
 import cors from 'cors'
 import multer from 'multer'
 
@@ -13,14 +14,16 @@ const app = e()
 
 app.use(cors())
 
-app.use('/payment', paymentRoute)
 app.use(e.json())
 app.use(cookieParser())
 app.use(e.urlencoded({ extended: false }))
-app.use('/', authRoute)
-app.use('/dashboard', adminRoute)
-app.use('/', clientRoute)
-app.use('/cart', cartRoute)
+
+app.use('/api/payment', paymentRoute)
+app.use('/api', authRoute)
+app.use('/api', productsRoute)
+app.use('/api', adminRoute)
+app.use('/api', clientRoute)
+app.use('/api/cart', cartRoute)
 
 
 app.use((err, req, res, next) => {
