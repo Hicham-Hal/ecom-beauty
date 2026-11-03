@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import paymentRoute from './routes/payment.route.js'
 import cartRoute from './routes/cart.route.js'
 import productsRoute from './routes/product.route.js'
+import galleryRoute from './routes/Gallery.route.js'
 import cors from 'cors'
 import multer from 'multer'
 
@@ -24,6 +25,7 @@ app.use('/api', productsRoute)
 app.use('/api', adminRoute)
 app.use('/api', clientRoute)
 app.use('/api/cart', cartRoute)
+app.use('/api', galleryRoute)
 
 
 app.use((err, req, res, next) => {
