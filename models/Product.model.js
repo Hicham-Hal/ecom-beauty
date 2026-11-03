@@ -17,14 +17,11 @@ const productSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      // required: true,
-      enum: [
-        'Robes de Mariée',
-        'Caftans',
-        'Robes de Soirée',
-        'Abayas',
-        'Tenues Traditionnelles',
-      ],
+      required: true,
+      categoryName: {
+        fr: { type: String, default: '' },
+        ar: { type: String, default: '' }
+      }
     },
     price: { type: Number, required: true, min: 0 },       // DZD
     preparationDays: { type: Number, required: true, min: 0 },
