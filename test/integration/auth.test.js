@@ -6,9 +6,9 @@ import { createAuthedUser } from '../helpers/helper.js'
 
 beforeAll(connectTestDb)
 afterEach(clearTestDb)
-afterAll(closeTestDb)
+afterAll(closeTestDb)describe
 
-describe('POST /register', ()=>{
+('POST /register', ()=>{
     it('create a user with role of customer and returns an access token', async() => {
         const res = await request(app).post('/register').send({
             name: 'userd',
