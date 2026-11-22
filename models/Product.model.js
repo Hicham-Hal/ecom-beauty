@@ -1,52 +1,33 @@
 import mongoose from 'mongoose'
 
-const colorSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },   // e.g. "Rouge"
-    mediaUrl: { type: String, required: true },           // photo or video of the dress in this color
+const colorSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    mediaUrl: { type: String, default: '' },
     mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
-  },
-  { _id: true }
-);
+})
 
 const productSchema = new mongoose.Schema(
-  {
-    name: {
-      fr: { type: String, required: true, trim: true },
-      ar: { type: String, required: true, trim: true },
+    {
+        name: {
+            fr: { type: String, required: true, trim: true },
+            ar: { type: String, trim: true, default: '' },
+        },
+        category: { type: String, required: true, index: true },   // = Category._id
+        price: { type: Number, required: true, min: 0 },
+        preparationDays: { type: Number, default: 0, min: 0 },
+        sizes: { type: [String], default: [] },
+        images: { type: [String], default: [] },                   // first = main image
+        video: { type: String, default: '' },
+        colors: { type: [colorSchema], default: [] },
+        description: {
+            fr: { type: String, default: '' },
+            ar: { type: String, default: '' },
+        },
+        isBestSeller: { type: Boolean, default: false },
+        isNewArrival: { type: Boolean, default: false },
+        inStock: { type: Boolean, default: true },
     },
-    category: {
-      type: String,
-      required: true,
-      categoryName: {
-        fr: { type: String, default: '' },
-        ar: { type: String, default: '' }
-      }
-    },
-    price: { type: Number, required: true, min: 0 },       // DZD
-    preparationDays: { type: Number, required: true, min: 0 },
-    sizes: {
-      type: [String],
-      default: [],
-      set: (arr) => [...new Set(arr.map((s) => s.trim().toUpperCase()).filter(Boolean))],
-    },
-    images: {
-      type: [String],                                      // first image = main image
-      validate: [(arr) => arr.length > 0, 'At least one photo is required'],
-    },
-    video: { type: String, default: '' },                  // optional
-    colors: { type: [colorSchema], default: [] },
-    description: {
-      fr: { type: String, trim: true, default: '' },
-      ar: { type: String, trim: true, default: '' },
-    },
-    isBestSeller: { type: Boolean, default: false },       // Meilleure vente
-    isNewArrival: { type: Boolean, default: false },       // Nouveauté de la saison
-    inStock: { type: Boolean, default: true },             // En stock
-  },
-  { timestamps: true }
-);
+    { timestamps: true }
+)
 
-const Product = mongoose.model('Product', productSchema)
-
-export default Product
+export default mongoose.model('Product', productSchema)
