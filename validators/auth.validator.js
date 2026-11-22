@@ -28,7 +28,7 @@ export const loginValidator = [
         .trim()
         .notEmpty().withMessage('Email is required')
         .isEmail().withMessage('Email must be a valid email address')
-        .normalizeEmail(),
+        .normalizeEmail({ gmail_remove_dots: false }),
 
     body('password')
         .notEmpty().withMessage('Password is required')
