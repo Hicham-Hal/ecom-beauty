@@ -1,39 +1,35 @@
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
+import { fileURLToPath } from 'url'
 
-const uploadDir = 'uploads/tmp'
-
-// Make sure the folder exists (multer's diskStorage does not create it when you pass a function)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const uploadDir = path.join(__dirname, '..', 'uploads', 'tmp')   // temporary, files go to Cloudinary
 fs.mkdirSync(uploadDir, { recursive: true })
 
-// Storage config - saves to disk with a unique filename
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir)
-    },
+    destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
-        cb(null, uniqueSuffix + path.extname(file.originalname).toLowerCase())
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9)
+        cb(null, unique + path.extname(file.originalname).toLowerCase())
     },
 })
 
-// Accept images and videos
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
-        cb(null, true)
-    } else {
-        cb(new Error('Only image or video files are allowed'), false)
-    }
-}
+const invalidType = (message) => Object.assign(new Error(message), { status: 400 })
 
-const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB per file
-        files: 31,                   // 10 images + 1 video + 20 color files
-    },
-})
+const make = ({ maxMB, allowVideo }) =>
+    multer({
+        storage,
+        fileFilter: (req, file, cb) => {
+            const ok = file.mimetype.startsWith('image/') || (allowVideo && file.mimetype.startsWith('video/'))
+            ok ? cb(null, true) : cb(invalidType(allowVideo ? 'Only image or video files are allowed' : 'Only image files are allowed'), false)
+        },
+        limits: { fileSize: maxMB * 1024 * 1024 * 2, files: 1 },
+    })
 
-export default upload
+const adminUpload = make({ maxMB: 100, allowVideo: true })    // admin: photos + videos
+const receiptUpload = make({ maxMB: 5, allowVideo: false })   // customers: receipt photo only
+
+// use after optionalAdmin
+export const chooseUpload = (req, res, next) =>
+    (req.isAdmin ? adminUpload : receiptUpload).single('file')(req, res, next)
