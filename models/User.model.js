@@ -1,41 +1,19 @@
 import mongoose from 'mongoose'
 
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    role: {
-        type: String,
-        enum: ['admin', 'customer'],
-        default: 'customer'
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    cart: [{ 
-        product: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Product',
-        },
-        quantity: {
-            type: Number,
-            default: 1,
-            min: 1
-        }
-    }],
-    fav: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Product'
-    }]
-}, {timestamps: true})
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },                    // bcrypt hash, never plain text
+    role: { type: String, enum: ['admin'], default: 'admin' },
+}, { timestamps: true })
 
-const User = mongoose.model('User', userSchema)
+// never send the password hash to the browser
+userSchema.set('toJSON', {
+    versionKey: false,
+    transform: (doc, ret) => {
+        delete ret.password
+        return ret
+    },
+})
 
-export default User;
+export default mongoose.model('User', userSchema)
