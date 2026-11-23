@@ -7,6 +7,7 @@ import productRoute from './routes/product.route.js'
 import categoryRoute from './routes/Category.route.js'
 import galleryRoute from './routes/Gallery.route.js'
 import cors from 'cors'
+import settingsRoute from './routes/setting.route.js'
 import uploadRoute from './routes/upload.route.js'
 import multer from 'multer'
 
@@ -26,6 +27,7 @@ app.use('/api', uploadRoute)
 app.use('/api', galleryRoute)
 app.use('/api', productRoute)
 app.use('/api', categoryRoute)
+app.use('/api', settingsRoute)
 
 
 app.use((err, req, res, next) => {
